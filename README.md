@@ -6,10 +6,7 @@ The experimental setup reported in the paper uses Python 3.9, PyTorch 1.13.1, an
 
 ## Toronto-3D Data Preparation
 
-1. Place the input Toronto-3D PLY scans in a dataset directory. The preprocessing script scans `*.ply` files in the dataset root and reads semantic labels from the `scalar_Label` field.
-2. Set `DATASET_ROOT` in `convert_toronto3d.py` and `ConfigToronto_3D.dataset_root` in `helper_tool.py` to the **same** dataset directory.
-3. Ensure the semantic labels used for training are encoded as eight classes, `0`–`7` (`Ground`, `Road_markings`, `Natural`, `Building`, `Utility_line`, `Pole`, `Car`, and `Fence`). The current preprocessing script preserves the input label IDs; it does not automatically remap them.
-4. Run preprocessing:
+Run preprocessing
 
 ```bash
 python convert_toronto3d.py
