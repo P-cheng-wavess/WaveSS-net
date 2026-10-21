@@ -26,8 +26,6 @@ The best validation checkpoint is saved as `train_output/<timestamp>/checkpoint.
 
 
 
-The evaluation script accumulates point-wise probabilities through voting, projects predictions to the original point cloud, reports overall accuracy (OA), mean intersection over union (mIoU), and per-class IoU, and saves prediction PLY files under `test_output/<timestamp>/val_preds/`.
-
 ## Reported Toronto-3D Result
 
 | Test split | OA | mIoU | Ground | Road markings | Natural | Building | Utility line | Pole | Car | Fence |
