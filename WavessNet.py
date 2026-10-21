@@ -21,15 +21,18 @@ class Network(nn.Module):
         elif name == 'SemanticKITTI':
 
             self.class_weights = DP.get_class_weights('SemanticKITTI')
-            self.fc0 = nn.Linear(3, 8)
+            self.fc0 = nn.Linear(9, 8)
         elif name == 'Sensaturban':
 
             self.class_weights = DP.get_class_weights('Sensaturban')
-            self.fc0 = nn.Linear(12, 8)
+            self.fc0 = nn.Linear(18, 8)
         elif name == 'S3DIS':
 
             self.class_weights = DP.get_class_weights('S3DIS')
-            self.fc0 = pt_utils.Conv1d(6, 8, kernel_size=1, bn=True)
+            self.fc0 = nn.Linear(12, 8)
+        elif name in ('NPM3D', 'ParisLille3D', 'Paris-Lille-3D'):
+            self.class_weights = None
+            self.fc0 = nn.Linear(config.input_channels + 6, 8)
         else:
             raise ValueError(f"Unsupported dataset: {name}")
 
@@ -81,7 +84,20 @@ class Network(nn.Module):
     def forward(self, end_points):
 
         features = end_points['features']
-        wavelet_prior = features[:, :, 6:12] if self.config.name in ('Toronto_3D', 'Toronto3D') else None
+        wavelet_prior = end_points.get('wavelet_prior')
+        if wavelet_prior is None:
+            if features.size(-1) != self.fc0.in_features:
+                raise ValueError(f"Missing six-channel wavelet prior for {self.config.name}")
+            wavelet_prior = features[:, :, -6:]
+        else:
+            if wavelet_prior.ndim != 3 or wavelet_prior.shape != (features.size(0), features.size(1), 6):
+                raise ValueError("wavelet_prior must have shape [B, N, 6]")
+            if features.size(-1) == self.fc0.in_features - 6:
+                features = torch.cat([features, wavelet_prior], dim=-1)
+            elif features.size(-1) == self.fc0.in_features:
+                features = torch.cat([features[:, :, :-6], wavelet_prior], dim=-1)
+            else:
+                raise ValueError("Invalid input feature channels")
         features = self.fc0(features)
         features = self.fc0_acti(features)
         features = features.transpose(1, 2)
