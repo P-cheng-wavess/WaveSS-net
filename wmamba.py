@@ -30,10 +30,7 @@ def reorder_points_by_hilbert(xyz, features, p=10):
         idx_h = np.array(hilbert.distances_from_points(norm.tolist()))
         order_h = np.argsort(idx_h)
 
-        norm_t = norm.copy()
-        norm_t[:, 0] = (2**p - 1) - norm_t[:, 0]
-        idx_t = np.array(hilbert.distances_from_points(norm_t.tolist()))
-        order_t = np.argsort(idx_t)
+        order_t = order_h[::-1].copy()
 
         order = np.concatenate([order_h, order_t])
 
