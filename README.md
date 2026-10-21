@@ -1,66 +1,53 @@
 # WaveSS-net
 Official implementation of WaveSS-Net: Wavelet-Guided Structural Prior and State-Space Learning for Large-Scale MLS Point Cloud Semantic Segmentation.
-## Requirements
+## Environment
 
-The research environment uses Python 3.9, PyTorch 1.13.1 and CUDA 11.8. For installation, choose mutually compatible PyTorch, CUDA and `mamba-ssm` builds for your GPU.
+The experimental setup reported in the paper uses Python 3.9, PyTorch 1.13.1, and CUDA 11.8. The implementation also uses NumPy, pandas, scikit-learn, PyWavelets (`pywt`), `hilbertcurve`, and `mamba_ssm`. The C++ grid-subsampling extension imported by `helper_tool.py` must be available in the Python environment. Install compatible versions of the dependencies for your CUDA and PyTorch setup.
 
-```bash
-pip install -r requirements.txt
-pip install mamba-ssm
-```
+## Toronto-3D Data Preparation
 
-## Toronto-3D dataset
-
-Download Toronto-3D from its dataset provider and prepare the raw point clouds. The current code supports `.ply` files with XYZ, RGB and semantic label fields, and text files containing XYZ, RGB and a final label column.
-
-The experiment uses the L002 split:
-
-- **Training:** L001, L003 and L004
-- **Testing:** L002
-- **Classes:** 8 semantic classes; raw label 0 (Unclassified) is ignored.
-
-### Preprocessing
+1. Place the input Toronto-3D PLY scans in a dataset directory. The preprocessing script scans `*.ply` files in the dataset root and reads semantic labels from the `scalar_Label` field.
+2. Set `DATASET_ROOT` in `convert_toronto3d.py` and `ConfigToronto_3D.dataset_root` in `helper_tool.py` to the **same** dataset directory.
+3. Ensure the semantic labels used for training are encoded as eight classes, `0`–`7` (`Ground`, `Road_markings`, `Natural`, `Building`, `Utility_line`, `Pole`, `Car`, and `Fence`). The current preprocessing script preserves the input label IDs; it does not automatically remap them.
+4. Run preprocessing:
 
 ```bash
-python preprocess.py --raw_dir /path/to/Toronto_3D --out_dir data/processed
+python convert_toronto3d.py
 ```
 
-The preprocessing script produces downsampled point clouds, point-level Hilbert wavelet priors and the original-cloud projection indices.
+The preprocessing script produces `original_ply/` and `input_0.060/`, including subsampled PLY files, KDTree and projection caches, `knn/` neighbor caches, `wavelet_features/` residual caches, and Hilbert order files. The dataset loader reads these files during training and evaluation.
 
 ## Training
 
-```bash
-python train_toronto3d.py --data_dir data/processed --output runs/toronto
-```
-
-Training options and network hyperparameters are defined in `wavessnet/config.py`. Additional command-line options are available with `--help`.
-
-## Evaluation
+Toronto-3D uses L002 for validation/testing and the remaining sections for training. The default configuration uses AdamW, batch size `4`, and `64` epochs.
 
 ```bash
-python test_toronto3d.py --data_dir data/processed --checkpoint runs/toronto/last.pth --votes 100
+python main_toronto3d.py 
 ```
 
-The evaluation script uses label-free spatial coverage, probability voting and projection back to the original point cloud. It reports overall accuracy (OA) and mean intersection-over-union (mIoU) across eight valid classes.
+The best validation checkpoint is saved as `train_output/<timestamp>/checkpoint.tar` by default. Use `--checkpoint_path` to resume training from a saved checkpoint.
 
-## Tests
 
-```bash
-python -m unittest discover -s tests -v
-```
 
-## Acknowledgements
+The evaluation script accumulates point-wise probabilities through voting, projects predictions to the original point cloud, reports overall accuracy (OA), mean intersection over union (mIoU), and per-class IoU, and saves prediction PLY files under `test_output/<timestamp>/val_preds/`.
 
-We thank the authors and contributors of the following research projects:
+## Reported Toronto-3D Result
 
-- **RandLA-Net** — Qingyong Hu et al., *RandLA-Net: Efficient Semantic Segmentation of Large-Scale Point Clouds*, CVPR 2020. [Project](https://github.com/QingyongHu/RandLA-Net)
-- **PointNet++** — Charles R. Qi et al., *PointNet++: Deep Hierarchical Feature Learning on Point Sets in a Metric Space*, NeurIPS 2017. [Project](https://github.com/charlesq34/pointnet2)
-- **Mamba** — Albert Gu and Tri Dao, *Mamba: Linear-Time Sequence Modeling with Selective State Spaces*, 2024. [Project](https://github.com/state-spaces/mamba)
+| Test split | OA | mIoU | Ground | Road markings | Natural | Building | Utility line | Pole | Car | Fence |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| L002 | 97.1% | 86.4% | 95.61% | 86.48% | 95.37% | 87.86% | 87.25% | 84.84% | 89.10% | 64.86% |
 
-We also acknowledge the creators of the Toronto-3D dataset and the open-source libraries used in this implementation. Please cite the original works where appropriate.
+These are the Toronto-3D results reported in the WaveSS-Net manuscript. Class-wise values are IoU scores.
 
-## Citation
+## Acknowledgments
 
-Paper citation details will be added when available.
+We thank the authors and contributors of the following open-source projects for their work:
+
+- [Mamba](https://github.com/state-spaces/mamba)
+- [RandLA-Net](https://github.com/QingyongHu/RandLA-Net)
+- [PointNet++](https://github.com/charlesq34/pointnet2)
+- [RandLA-Net-Pytorch-New](https://github.com/liuxuexun/RandLA-Net-Pytorch-New)
+
+These projects provided valuable foundations and references for the development of this implementation.
 
 
