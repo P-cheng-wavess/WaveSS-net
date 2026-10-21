@@ -71,15 +71,6 @@ class Toronto_3D(Dataset):
         self.load_sub_sampled_clouds(cfg.sub_grid_size)
 
 
-        self.knn_idx_global = {'training': [], 'validation': []}
-        knn_dir = join(self.path, f'input_{cfg.sub_grid_size:.3f}', 'knn')
-        for split in ['training', 'validation']:
-            for name in self.input_names[split]:
-                with open(join(knn_dir, f'{name}_knn.pkl'), 'rb') as f:
-                    knn_cache = pickle.load(f)
-                self.knn_idx_global[split].append(np.asarray(knn_cache['idx'], dtype=np.int32))
-
-
         self.hilbert_wavelet_features = {'training': [], 'validation': []}
         hilbert_dir = join(self.path, f'input_{cfg.sub_grid_size:.3f}', 'wavelet_features')
         for split in ['training', 'validation']:
@@ -403,49 +394,7 @@ class Toronto_3DSampler(Dataset):
         input_points, input_neighbors, input_pools, input_up_samples = [], [], [], []
 
         for i in range(cfg.num_layers):
-            if i == 0:
-
-                neighbour_idx_list = []
-                for b in range(batch_size):
-                    room_id    = int(np.asarray(batch_cloud_idx[b]).item())
-                    global_knn = self.dataset.knn_idx_global[self.split][room_id]
-                    sel_idx    = batch_pc_idx[b]
-
-
-                    ng_global = global_knn[sel_idx]
-
-
-                    order      = np.argsort(sel_idx)
-                    sorted_sel = sel_idx[order]
-
-
-                    flat_ng = ng_global.ravel()
-                    pos     = np.searchsorted(sorted_sel, flat_ng)
-
-
-                    pos_safe = pos.copy()
-                    pos_safe[pos_safe >= N] = 0
-
-
-                    mask_oob      = pos >= N
-                    mask_mismatch = sorted_sel[pos_safe] != flat_ng
-                    mask_invalid  = mask_oob | mask_mismatch
-
-
-                    pos_safe[mask_invalid] = 0
-
-
-                    local_flat = order[pos_safe]
-
-
-                    ng_local = local_flat.reshape(N, -1)
-                    neighbour_idx_list.append(ng_local)
-
-                neighbour_idx = np.stack(neighbour_idx_list, axis=0)
-            else:
-
-                neighbour_idx = DP.knn_search(batch_xyz, batch_xyz, cfg.k_n)
-
+            neighbour_idx = DP.knn_search(batch_xyz, batch_xyz, cfg.k_n)
 
             num_pts = batch_xyz.shape[1]
             mi, ma  = neighbour_idx.min(), neighbour_idx.max()
